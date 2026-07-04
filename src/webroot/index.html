@@ -1,0 +1,339 @@
+<!doctype html>
+
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1.0,user-scalable=no">
+  <title>SMS Forwarder</title>
+  <style>
+    :root {
+      --md-sys-color-surface: #1e1e1e;
+      --md-sys-color-surface-variant: #2d2d2d;
+      --md-sys-color-on-surface: #e6e1e5;
+      --md-sys-color-on-surface-variant: #cac4d0;
+      --md-sys-color-primary: #d0bcff;
+      --md-sys-color-on-primary: #381e72;
+      --md-sys-color-outline: #938f99;
+      --md-shape-corner-medium: 12px;
+      --md-shape-corner-small: 8px;
+    }
+
+    @media (prefers-color-scheme: light) {
+      :root {
+        --md-sys-color-surface: #fef7ff;
+        --md-sys-color-surface-variant: #e7e0ec;
+        --md-sys-color-on-surface: #1d1b20;
+        --md-sys-color-on-surface-variant: #49454f;
+        --md-sys-color-primary: #6750a4;
+        --md-sys-color-on-primary: #fff;
+        --md-sys-color-outline: #79747e;
+      }
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Roboto', system-ui, -apple-system, sans-serif;
+      background: var(--md-sys-color-surface);
+      color: var(--md-sys-color-on-surface);
+      min-height: 100vh;
+      padding: 16px;
+    }
+
+    .container {
+      max-width: 480px;
+      margin: 0 auto;
+    }
+
+    .header {
+      padding: 24px 8px 16px;
+    }
+
+    .header h1 {
+      font-size: 22px;
+      font-weight: 500;
+      letter-spacing: 0.25px;
+    }
+
+    .header p {
+      font-size: 14px;
+      color: var(--md-sys-color-on-surface-variant);
+      margin-top: 4px;
+    }
+
+    .card {
+      background: var(--md-sys-color-surface-variant);
+      border-radius: var(--md-shape-corner-medium);
+      padding: 20px 16px;
+      margin-bottom: 16px;
+    }
+
+    .form-group {
+      margin-bottom: 20px;
+    }
+
+    .form-group:last-child {
+      margin-bottom: 0;
+    }
+
+    .form-label {
+      display: block;
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--md-sys-color-on-surface-variant);
+      margin-bottom: 6px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .form-input {
+      width: 100%;
+      padding: 14px 16px;
+      font-size: 16px;
+      font-family: 'Roboto Mono', 'Courier New', monospace;
+      background: var(--md-sys-color-surface);
+      color: var(--md-sys-color-on-surface);
+      border: 1px solid var(--md-sys-color-outline);
+      border-radius: var(--md-shape-corner-small);
+      outline: none;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+
+    .form-input:focus {
+      border-color: var(--md-sys-color-primary);
+      box-shadow: 0 0 0 2px rgba(208, 188, 255, 0.2);
+    }
+
+    .form-input::placeholder {
+      color: #666;
+      font-family: 'Roboto', system-ui, sans-serif;
+      font-size: 14px;
+    }
+
+    .form-hint {
+      font-size: 12px;
+      color: var(--md-sys-color-on-surface-variant);
+      margin-top: 4px;
+    }
+
+    .btn-row {
+      display: flex;
+      gap: 12px;
+      margin-top: 8px;
+    }
+
+    .btn {
+      flex: 1;
+      padding: 14px 24px;
+      font-size: 14px;
+      font-weight: 500;
+      border: none;
+      border-radius: 100px;
+      cursor: pointer;
+      letter-spacing: 0.4px;
+      transition: opacity 0.2s, box-shadow 0.2s;
+      user-select: none;
+    }
+
+    .btn:active {
+      opacity: 0.8;
+    }
+
+    .btn-primary {
+      background: var(--md-sys-color-primary);
+      color: var(--md-sys-color-on-primary);
+    }
+
+    .btn-outline {
+      background: transparent;
+      color: var(--md-sys-color-primary);
+      border: 1px solid var(--md-sys-color-outline);
+    }
+
+    .btn:disabled {
+      opacity: 0.38;
+      pointer-events: none;
+    }
+
+    /* Snackbar */
+    .snackbar {
+      position: fixed;
+      bottom: 50%;
+      left: 50%;
+      transform: translateX(-50%) translateY(100px);
+      background: #333;
+      color: #fff;
+      padding: 20px 30px;
+      border-radius: 4px;
+      font-size: 14px;
+      z-index: 1000;
+      opacity: 0;
+      transition: transform 0.25s ease, opacity 0.25s ease;
+      pointer-events: none;
+      max-width: 90vw;
+      text-align: center;
+    }
+
+    .snackbar.show {
+      transform: translateX(-50%) translateY(0);
+      opacity: 1;
+    }
+
+    .snackbar.error {
+      background: #93000a;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>SMS Forwarder</h1>
+      <p>配置 WxPusher 推送参数</p>
+      <p>配置参数获取：<a href="https://wxpusher.zjiecode.com/admin" style="text-decoration:none" target="_blank">https://wxpusher.zjiecode.com/admin</a></p>
+    </div>
+    <div class="card">
+      <div class="form-group">
+        <label class="form-label" for="appToken">AppToken</label>
+        <input class="form-input" type="text" id="appToken" placeholder="请输入 WxPusher AppToken" autocomplete="off" autocorrect="off" autocapitalize="off">
+        <div class="form-hint">在 WxPusher 管理后台获取</div>
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="uids">UIDs</label>
+        <input class="form-input" type="text" id="uids" placeholder="请输入接收用户的 UID" autocomplete="off" autocorrect="off" autocapitalize="off">
+        <div class="form-hint">在 WxPusher 用户列表查看</div>
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="userId">USER_ID</label>
+        <input class="form-input" type="number" id="userId" placeholder="0" value="0" min="0" autocomplete="off">
+        <div class="form-hint">Android 用户 ID，多用户设备需要修改，默认 0</div>
+      </div>
+    </div>
+    <div class="btn-row">
+      <button class="btn btn-outline" id="btnReset" type="button">重置</button>
+      <button class="btn btn-primary" id="btnSave" type="button">保存配置</button>
+    </div>
+  </div>
+  <div class="snackbar" id="snackbar"></div>
+  <footer style="margin-top:20px;display:flex;align-items:center;justify-content:center">
+    <p style="padding-right:5px">Powered by</p>
+    <a style="text-decoration:none" href="http://zgcwkj.cn" target="_blank">zgcwkj</a>
+  </footer>
+  <script>
+    (function () {
+      'use strict';
+
+      var appTokenEl = document.getElementById('appToken');
+      var uidsEl = document.getElementById('uids');
+      var userIdEl = document.getElementById('userId');
+      var btnSave = document.getElementById('btnSave');
+      var btnReset = document.getElementById('btnReset');
+      var snackbar = document.getElementById('snackbar');
+
+      var CFG = '/data/adb/modules/sms_forwarder/sms_config.sh';
+      var ksu = (typeof window.ksu !== 'undefined' && window.ksu.exec) ? window.ksu : null;
+
+      // Toast
+      var snackTimer = 0;
+      function toast(msg, isError) {
+        if (ksu) { try { ksu.toast(msg); return; } catch (e) { } }
+        clearTimeout(snackTimer);
+        snackbar.textContent = msg;
+        snackbar.className = 'snackbar' + (isError ? ' error' : '');
+        void snackbar.offsetWidth;
+        snackbar.classList.add('show');
+        snackTimer = setTimeout(function () { snackbar.classList.remove('show'); }, 3000);
+      }
+
+      // ksu.exec wrapper
+      function ksuExec(cmd) {
+        return new Promise(function (resolve, reject) {
+          if (!ksu) return reject(new Error('ksu not available'));
+          var cbId = '_cb' + Date.now();
+          window[cbId] = function (r) {
+            delete window[cbId];
+            r && r.errno === 0 ? resolve(r) : reject(new Error((r && r.stderr) || 'exec failed'));
+          };
+          try { ksu.exec(cmd, '{}', cbId); } catch (e) { reject(e); }
+        });
+      }
+
+      // Parse shell config
+      function parseConfig(text) {
+        var cfg = { userId: '0', appToken: '', uids: '' };
+        var m;
+        if ((m = text.match(/^userId\s*=\s*(\d+)/m))) cfg.userId = m[1];
+        if ((m = text.match(/^appToken\s*=\s*["']([^"']*)["']/m))) cfg.appToken = m[1];
+        if ((m = text.match(/^uids\s*=\s*["']([^"']*)["']/m))) cfg.uids = m[1];
+        if (cfg.appToken === 'appToken') cfg.appToken = '';
+        if (cfg.uids === 'uids') cfg.uids = '';
+        return cfg;
+      }
+
+      // Load config
+      async function loadConfig() {
+        try {
+          var resp = await fetch('./sms_config.sh');
+          if (resp.ok) {
+            var cfg = parseConfig(await resp.text());
+            userIdEl.value = cfg.userId;
+            appTokenEl.value = cfg.appToken;
+            uidsEl.value = cfg.uids;
+            return;
+          }
+        } catch (e) { }
+        if (ksu) {
+          try {
+            var r = await ksuExec('cat ' + CFG);
+            var cfg = parseConfig(r.stdout || '');
+            userIdEl.value = cfg.userId;
+            appTokenEl.value = cfg.appToken;
+            uidsEl.value = cfg.uids;
+            return;
+          } catch (e) { }
+        }
+        toast('无法加载配置文件', true);
+      }
+
+      // Save config
+      async function saveConfig() {
+        var userId = userIdEl.value.trim() || '0';
+        var appToken = appTokenEl.value.trim();
+        var uids = uidsEl.value.trim();
+        if (!appToken) return toast('请输入 AppToken', true);
+        if (!uids) return toast('请输入 UIDs', true);
+
+        btnSave.disabled = true;
+        btnSave.textContent = '保存中...';
+        try {
+          if (ksu) {
+            var at = appToken.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
+            var ud = uids.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
+            ksu.exec('cat > ' + CFG + ' << EOF\nuserId=' + userId + '\nappToken="' + at + '"\nuids="' + ud + '"\nEOF');
+          } else {
+            var resp = await fetch('./save.sh?userId=' + encodeURIComponent(userId) + '&appToken=' + encodeURIComponent(appToken) + '&uids=' + encodeURIComponent(uids));
+            if ((await resp.text()).indexOf('OK') !== 0) throw new Error('server error');
+          }
+          toast('配置已保存');
+        } catch (e) {
+          toast('保存失败: ' + e.message, true);
+        } finally {
+          btnSave.disabled = false;
+          btnSave.textContent = '保存配置';
+        }
+      }
+
+      // Init
+      loadConfig();
+      btnSave.addEventListener('click', saveConfig);
+      btnReset.addEventListener('click', function () {
+        appTokenEl.value = '';
+        uidsEl.value = '';
+      });
+    })();
+  </script>
+</body>
+</html>

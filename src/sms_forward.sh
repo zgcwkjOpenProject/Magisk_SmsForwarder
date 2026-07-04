@@ -1,10 +1,19 @@
 #!/system/bin/sh
 
 # 常量
-LOG_FILE="${MODDIR:-/data/local/tmp}/sms_debug.log"
+MODDIR="${MODDIR:-/data/local/tmp}"
+CONFIG_FILE="${MODDIR}/sms_config.sh"
+LOG_FILE="${MODDIR}/sms_debug.log"
 CONTENT_URI="content://sms/inbox"
 POLL_INTERVAL=10
-USER_ID=0
+
+# 加载配置文件
+if [ -f "$CONFIG_FILE" ]; then
+    . "$CONFIG_FILE"
+fi
+: "${userId:=userId}"
+: "${appToken:=appToken}"
+: "${uids:=uids}"
 
 # 日志组件
 log_info() {
@@ -12,11 +21,22 @@ log_info() {
     echo "$(date '+%Y-%m-%d %H:%M:%S') - $1" >> "$LOG_FILE"
 }
 
+# JSON 转义函数
+json_escape() {
+    local input="$1"
+    local soh
+    soh=$(printf '\001')
+    input=$(printf '%s\n' "$input" | tr '\n' "$soh")
+    input=$(printf '%s\n' "$input" | sed 's/\\/\\\\/g; s/"/\\"/g; s/\t/\\t/g; s/\r//g')
+    printf '%s\n' "$input" | sed "s/$soh/\\\\n/g"
+}
+
 # WxPusher 发送
 wxpusher_send() {
-    local content="$1"
-    local appToken="appToken"
-    local uids="uids"
+    local content=$(json_escape "$1")
+    if [ "$appToken" = "appToken" ] || [ "$uids" = "uids" ]; then
+        return 1
+    fi
 
     curl -s -X POST "https://wxpusher.zjiecode.com/api/send/message" \
         -H "Content-Type: application/json" \
@@ -46,7 +66,7 @@ parse_sms_row() {
 # 读取最新一条短信（使用 Content Provider）
 read_latest_sms() {
     local out parsed id address body date
-    out=$(content query --uri "$CONTENT_URI" --user "$USER_ID" \
+    out=$(content query --uri "$CONTENT_URI" --user "$userId" \
         --projection _id:address:body:date \
         --sort "date" 2>&1 | tr -d '\r')
 
@@ -66,7 +86,7 @@ read_latest_sms() {
 # 查询指定 ID 之后的新短信（增量）
 read_new_sms_since() {
     local last_id="$1"
-    content query --uri "$CONTENT_URI" --user "$USER_ID" \
+    content query --uri "$CONTENT_URI" --user "$userId" \
         --projection _id:address:body:date \
         --where "_id>${last_id}" --sort "_id" 2>&1 | tr -d '\r'
 }
@@ -78,6 +98,9 @@ log_info "脚本已启动，开始监听短信..."
 log_info "短信内容来源: $CONTENT_URI"
 log_info "轮询间隔: ${POLL_INTERVAL} 秒"
 log_info "用户标识: ${USER_ID}"
+
+# 发送上线通知
+wxpusher_send "SMS Forwarder 已启动，开始监听短信" > /dev/null 2>&1 &
 
 # 初始化最新短信（首次成功读取仅初始化游标）
 LAST_ID=0
