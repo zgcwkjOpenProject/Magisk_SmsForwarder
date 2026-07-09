@@ -1,6 +1,6 @@
 id=sms_forwarder
 name=SMS Forwarder
-version=v1.1
-versionCode=11
+version=v1.2
+versionCode=260709
 author=zgcwkj
 description=短信转发模块，使用 WxPusher 推送。

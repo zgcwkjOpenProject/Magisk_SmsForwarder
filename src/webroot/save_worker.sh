@@ -4,6 +4,7 @@ MODDIR="/data/adb/modules/sms_forwarder"
 WEBROOT="${MODDIR}/webroot"
 CONFIG_FILE="${MODDIR}/sms_config.sh"
 ACTIVITY_FILE="/data/local/tmp/sms_forwarder_activity"
+CONFIG_CHANGED_FLAG="/data/local/tmp/sms_forwarder_config_changed"
 
 # 更新活跃时间
 date +%s > "$ACTIVITY_FILE" 2>/dev/null
@@ -43,6 +44,8 @@ if [ "$FILE_PATH" = "/save.sh" ]; then
     [ -z "$userId" ] && userId="0"
     if [ -n "$appToken" ] && [ -n "$uids" ]; then
         printf '# SMS Forwarder 配置文件\nuserId=%s\nappToken="%s"\nuids="%s"\n' "$userId" "$appToken" "$uids" > "$CONFIG_FILE"
+        # 创建配置变更标识文件
+        touch "$CONFIG_CHANGED_FLAG"
         # 重启短信转发进程使配置立即生效
         pkill -f sms_forward.sh 2>/dev/null
         MODDIR="${CONFIG_FILE%/*}"
